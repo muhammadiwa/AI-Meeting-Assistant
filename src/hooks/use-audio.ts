@@ -39,6 +39,16 @@ export function useAudio() {
         }
     }
 
+    const getAudioDevices = async () => {
+        try {
+            const devices = await navigator.mediaDevices.enumerateDevices()
+            return devices.filter(d => d.kind === 'audioinput')
+        } catch (e) {
+            console.error('Failed to get audio devices:', e)
+            return []
+        }
+    }
+
     const startRecording = async (sourceId: string) => {
         if (!engine.current) return
 
@@ -60,7 +70,7 @@ export function useAudio() {
             })
 
             // Start Audio
-            const micStream = await engine.current.getMicStream()
+            const micStream = await engine.current.getMicStream(settings.micDeviceId)
             const systemStream = await engine.current.getSystemStream(sourceId)
             const mixedStream = await engine.current.startMixing(micStream, systemStream)
 
@@ -99,6 +109,7 @@ export function useAudio() {
         startRecording,
         stopRecording,
         getDesktopSources,
+        getAudioDevices,
         clearTranscript,
         setSpeakerName
     }

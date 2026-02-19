@@ -12,8 +12,11 @@ export class AudioEngine {
         this.onAudioData = onAudioData || null;
     }
 
-    async getMicStream(): Promise<MediaStream> {
-        this.micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    async getMicStream(deviceId?: string): Promise<MediaStream> {
+        const constraints: MediaStreamConstraints = {
+            audio: deviceId ? { deviceId: { exact: deviceId } } : true
+        };
+        this.micStream = await navigator.mediaDevices.getUserMedia(constraints);
         return this.micStream;
     }
 

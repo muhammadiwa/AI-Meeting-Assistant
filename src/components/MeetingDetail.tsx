@@ -72,7 +72,7 @@ export function MeetingDetail() {
     return (
         <div className="space-y-4">
             <div className="flex items-center justify-between">
-                <Button variant="ghost" onClick={() => navigate('/dashboard/meetings')} className="gap-2">
+                <Button variant="ghost" onClick={() => navigate('/meetings')} className="gap-2">
                     <ArrowLeft className="h-4 w-4" />
                     Back to Meetings
                 </Button>

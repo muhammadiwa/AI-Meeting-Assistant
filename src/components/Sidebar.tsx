@@ -6,9 +6,9 @@ export function Sidebar() {
     const location = useLocation()
 
     const items = [
-        { icon: LayoutDashboard, label: 'Dashboard', href: '/dashboard' },
-        { icon: History, label: 'Meetings', href: '/dashboard/meetings' },
-        { icon: Settings, label: 'Settings', href: '/dashboard/settings' },
+        { icon: LayoutDashboard, label: 'Dashboard', href: '/' },
+        { icon: History, label: 'Meetings', href: '/meetings' },
+        { icon: Settings, label: 'Settings', href: '/settings' },
     ]
 
     const switchToOverlay = async () => {
@@ -41,14 +41,14 @@ export function Sidebar() {
             </div>
 
             <div className="mt-auto">
-                <Link to="/">
+                <Link to="/overlay">
                     <Button
-                        variant="outline"
-                        className="w-full gap-2"
+                        variant="default"
+                        className="w-full gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg transition-all hover:scale-105"
                         onClick={switchToOverlay}
                     >
                         <MonitorPlay className="h-4 w-4" />
-                        Overlay Mode
+                        Start Meeting
                     </Button>
                 </Link>
             </div>

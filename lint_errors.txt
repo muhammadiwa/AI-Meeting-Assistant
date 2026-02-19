@@ -1,0 +1,20 @@
+
+> ai-meeting-assistant@0.0.0 lint
+> eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 10
+
+
+D:\Project\ai-meeting-assistant\electron\preload.ts
+  31:3  error  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+
+D:\Project\ai-meeting-assistant\src\Overlay.tsx
+   40:6    warning  React Hook useEffect has a missing dependency: 'loadSources'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  130:101  error    Unexpected any. Specify a different type                                                                        @typescript-eslint/no-explicit-any
+
+D:\Project\ai-meeting-assistant\src\components\DashboardLayout.tsx
+  17:107  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\Project\ai-meeting-assistant\src\components\ui\button.tsx
+  55:18  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+Ô£û 5 problems (3 errors, 2 warnings)
+

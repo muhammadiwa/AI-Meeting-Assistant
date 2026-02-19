@@ -30,20 +30,34 @@ export function SettingsModal({
 }: SettingsModalProps) {
     const [apiKey, setApiKey] = useState('')
     const [openaiKey, setOpenaiKey] = useState('')
+    const [micDeviceId, setMicDeviceId] = useState('')
+    const [audioDevices, setAudioDevices] = useState<MediaDeviceInfo[]>([])
 
     useEffect(() => {
         const loadSettings = async () => {
             const settings = await db.getSettings()
             setApiKey(settings.apiKey || '')
             setOpenaiKey(settings.openaiKey || '')
+            setMicDeviceId(settings.micDeviceId || '')
         }
+
+        const loadDevices = async () => {
+            try {
+                const send = await navigator.mediaDevices.enumerateDevices()
+                setAudioDevices(send.filter(d => d.kind === 'audioinput'))
+            } catch (e) {
+                console.error("Failed to load audio devices", e)
+            }
+        }
+
         if (open) {
             loadSettings()
+            loadDevices()
         }
     }, [open])
 
     const saveSettings = async () => {
-        await db.setSettings({ apiKey, openaiKey })
+        await db.setSettings({ apiKey, openaiKey, micDeviceId })
         onOpenChange(false)
     }
 
@@ -55,7 +69,7 @@ export function SettingsModal({
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
                     <div className="grid gap-2">
-                        <Label>Audio Source</Label>
+                        <Label>System Audio (Screen/Window)</Label>
                         <Select value={selectedSourceId} onValueChange={onSourceChange}>
                             <SelectTrigger>
                                 <SelectValue placeholder="Select screen to record" />
@@ -64,6 +78,22 @@ export function SettingsModal({
                                 {sources.map((source) => (
                                     <SelectItem key={source.id} value={source.id}>
                                         {source.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    <div className="grid gap-2">
+                        <Label>Microphone</Label>
+                        <Select value={micDeviceId} onValueChange={setMicDeviceId}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select microphone" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {audioDevices.map((device) => (
+                                    <SelectItem key={device.deviceId} value={device.deviceId}>
+                                        {device.label || `Microphone ${device.deviceId.slice(0, 5)}...`}
                                     </SelectItem>
                                 ))}
                             </SelectContent>

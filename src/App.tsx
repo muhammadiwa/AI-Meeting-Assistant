@@ -10,8 +10,8 @@ function App() {
     return (
         <Router>
             <Routes>
-                <Route path="/" element={<Overlay />} />
-                <Route path="/dashboard" element={<DashboardLayout />}>
+                <Route path="/overlay" element={<Overlay />} />
+                <Route path="/" element={<DashboardLayout />}>
                     <Route index element={<Analytics />} />
                     <Route path="analytics" element={<Analytics />} />
                     <Route path="meetings" element={<MeetingHistory />} />

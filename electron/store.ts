@@ -15,7 +15,7 @@ interface MeetingMetadata {
 interface Settings {
     apiKey: string
     openaiKey: string
-    audioDeviceId: string
+    micDeviceId?: string
 }
 
 const store = new Store<{
@@ -23,7 +23,7 @@ const store = new Store<{
     meetings: MeetingMetadata[]
 }>({
     defaults: {
-        settings: { apiKey: '', openaiKey: '', audioDeviceId: 'default' },
+        settings: { apiKey: '', openaiKey: '', micDeviceId: '' },
         meetings: [],
     },
 })

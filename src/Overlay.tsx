@@ -1,14 +1,14 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { LayoutDashboard, Eye, EyeOff } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
 import { useAudio } from '@/hooks/use-audio'
 import { useIntelligence } from '@/hooks/use-intelligence'
 import { TranscriptView } from '@/components/TranscriptView'
 import { ControlBar } from '@/components/ControlBar'
 import { SettingsModal } from '@/components/SettingsModal'
 import { db } from '@/lib/db-client'
+import { cn } from '@/lib/utils'
 
 function Overlay() {
   const navigate = useNavigate()
@@ -32,11 +32,20 @@ function Overlay() {
   const [selectedSourceId, setSelectedSourceId] = useState<string>('')
   const [isQuietMode, setIsQuietMode] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
+  const [isHovered, setIsHovered] = useState(false)
+
+  const loadSources = useCallback(async () => {
+    const s = await getDesktopSources()
+    setSources(s)
+    if (s.length > 0 && !selectedSourceId) {
+      setSelectedSourceId(s[0].id)
+    }
+  }, [getDesktopSources, selectedSourceId])
 
   // Load sources on mount
   useEffect(() => {
     loadSources()
-  }, [])
+  }, [loadSources])
 
   // Analyze context periodically (every 30s) if recording
   useEffect(() => {
@@ -50,22 +59,11 @@ function Overlay() {
     return () => clearInterval(interval)
   }, [isRecording, transcript, generateInsight])
 
-  const loadSources = async () => {
-    const s = await getDesktopSources()
-    setSources(s)
-    if (s.length > 0 && !selectedSourceId) {
-      setSelectedSourceId(s[0].id)
-    }
-  }
-
   const handleStart = async () => {
     if (!selectedSourceId) {
-      // Refresh sources if none selected (might handle permission prompt flow here)
       await loadSources()
-      if (sources.length > 0) setSelectedSourceId(sources[0].id)
-      else return
+      // ... (rest of logic)
     }
-    // ensure we have a valid source ID before starting
     const idToUse = selectedSourceId || (sources.length > 0 ? sources[0].id : '')
     if (idToUse) {
       await startRecording(idToUse)
@@ -76,7 +74,6 @@ function Overlay() {
     stopRecording()
     setIsProcessing(true)
 
-    // Generate Summary
     const fullText = transcript.map(s => `[${s.speakerName || s.speaker}]: ${s.text}`).join('\n')
     let summary = ''
     if (fullText.trim().length > 50) {
@@ -90,7 +87,6 @@ function Overlay() {
       })
     }
 
-    // Save to DB
     const id = await db.saveMeeting({
       title: `Meeting ${new Date().toLocaleString()}`,
       date: new Date().toISOString(),
@@ -100,45 +96,91 @@ function Overlay() {
     }) as string
 
     setIsProcessing(false)
-
-    // Switch to Dashboard
     await window.ipcRenderer.invoke('set-window-mode', 'dashboard')
-    navigate(`/dashboard/meetings/${id}`)
+    navigate(`/meetings/${id}`)
   }
 
   const switchToDashboard = async () => {
     await window.ipcRenderer.invoke('set-window-mode', 'dashboard')
-    navigate('/dashboard')
+    navigate('/')
   }
 
   return (
-    <div className="h-screen w-screen overflow-hidden bg-transparent p-4 font-sans text-foreground">
-      <Card className="flex h-full flex-col gap-4 border-none bg-background/30 shadow-2xl backdrop-blur-xl">
-        {/* Drag Handle */}
+    <div className="h-screen w-screen overflow-hidden bg-transparent font-sans text-foreground flex flex-col">
+      {/* Main Glass Container */}
+      <div
+        className={cn(
+          "flex h-full flex-col border border-white/10 bg-black/60 shadow-2xl backdrop-blur-2xl transition-all duration-300 ease-in-out",
+          isQuietMode ? "opacity-30 hover:opacity-100" : "opacity-100"
+        )}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      >
+        {/* Header / Drag Handle */}
         {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-        <div className="h-6 w-full cursor-move rounded-t-lg bg-white/10" style={{ WebkitAppRegion: 'drag' } as any} />
+        <div className="flex h-10 w-full cursor-move items-center justify-between border-b border-white/5 bg-white/5 px-4" style={{ WebkitAppRegion: 'drag' } as any}>
+          <div className="flex items-center gap-2">
+            <div className={`h-2 w-2 rounded-full ${isRecording ? 'bg-red-500 animate-pulse' : 'bg-gray-500'}`} />
+            <span className="text-xs font-medium text-white/70">
+              {isRecording ? 'Recording Live' : 'Ready'}
+            </span>
+          </div>
 
-        {/* Main Content Area */}
-        <div className="flex-1 overflow-hidden p-4 pt-0 pb-0 relative">
+          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+          <div className="flex items-center gap-1 no-drag" style={{ WebkitAppRegion: 'no-drag' } as any}>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 text-white/50 hover:bg-white/10 hover:text-white"
+              onClick={() => setIsQuietMode(!isQuietMode)}
+              title={isQuietMode ? "Show Transcript" : "Quiet Mode"}
+            >
+              {isQuietMode ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 text-white/50 hover:bg-white/10 hover:text-white"
+              onClick={switchToDashboard}
+              title="Return to Dashboard"
+            >
+              <LayoutDashboard className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </div>
+
+        {/* Content Area */}
+        <div className="flex-1 overflow-hidden relative">
           {isProcessing ? (
-            <div className="flex h-full items-center justify-center text-white">
-              <p>Generating Summary...</p>
+            <div className="flex h-full flex-col items-center justify-center gap-3 text-white animate-in fade-in duration-500">
+              <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              <p className="text-sm font-medium text-white/80">Generating Summary...</p>
             </div>
           ) : (
-            !isQuietMode && <TranscriptView transcript={transcript} />
+            <div className={cn(
+              "h-full w-full transition-opacity duration-300",
+              isQuietMode && !isHovered ? "opacity-0" : "opacity-100"
+            )}>
+              <TranscriptView transcript={transcript} />
+            </div>
+          )}
+
+          {/* Insights Overlay */}
+          {insight && !isQuietMode && (
+            <div className="absolute bottom-4 left-4 right-4 animate-in slide-in-from-bottom-2 duration-300">
+              <div className="rounded-lg border border-blue-500/30 bg-blue-500/20 p-3 shadow-lg backdrop-blur-md">
+                <h4 className="mb-1 text-[10px] font-bold uppercase tracking-wider text-blue-400">AI Insight</h4>
+                <p className="text-xs text-white/90 leading-relaxed">{insight}</p>
+              </div>
+            </div>
           )}
         </div>
 
-        {/* Intelligence Overlay (Insights) */}
-        {insight && (
-          <div className="mx-4 rounded-md border bg-blue-500/10 p-3 text-xs backdrop-blur-md">
-            <h4 className="font-bold text-blue-500 mb-1">Insights</h4>
-            <p>{insight}</p>
-          </div>
-        )}
-
-        {/* Controls */}
-        <div className="p-4 pt-0 relative">
+        {/* Controls Footer */}
+        <div className={cn(
+          "border-t border-white/5 bg-white/5 p-4 transition-all duration-300",
+          isQuietMode && !isHovered ? "translate-y-full opacity-0" : "translate-y-0 opacity-100"
+        )}>
           <ControlBar
             isRecording={isRecording}
             connectionState={connectionState}
@@ -146,29 +188,8 @@ function Overlay() {
             onStopRecording={handleStop}
             onOpenSettings={() => setIsSettingsOpen(true)}
           />
-          <div className="absolute top-2 right-2 flex gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-6 w-6 p-0 text-white/50 hover:text-white"
-              onClick={() => setIsQuietMode(!isQuietMode)}
-              title="Toggle Quiet Mode"
-            >
-              {isQuietMode ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-6 w-6 p-0 text-white/50 hover:text-white"
-              onClick={switchToDashboard}
-              title="Open Dashboard"
-            >
-              <LayoutDashboard className="h-4 w-4" />
-            </Button>
-          </div>
         </div>
-      </Card>
-
+      </div>
 
       <SettingsModal
         open={isSettingsOpen}

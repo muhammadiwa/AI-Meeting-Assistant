@@ -1,7 +1,8 @@
 import { ipcRenderer, contextBridge } from 'electron'
 
 // --------- Expose some API to the Renderer process ---------
-contextBridge.exposeInMainWorld('ipcRenderer', {
+// --------- Expose some API to the Renderer process ---------
+const api = {
   on(...args: Parameters<typeof ipcRenderer.on>) {
     const [channel, listener] = args
     return ipcRenderer.on(channel, (event, ...args) => listener(event, ...args))
@@ -18,7 +19,15 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
     const [channel, ...omit] = args
     return ipcRenderer.invoke(channel, ...omit)
   },
+}
 
-  // You can expose other APTs you need here.
-  // ...
-})
+if (process.contextIsolated) {
+  try {
+    contextBridge.exposeInMainWorld('ipcRenderer', api)
+  } catch (error) {
+    console.error(error)
+  }
+} else {
+  // @ts-expect-error (define in d.ts)
+  window.ipcRenderer = api
+}

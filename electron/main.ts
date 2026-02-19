@@ -26,9 +26,15 @@ let win: BrowserWindow | null
 
 function createWindow() {
   win = new BrowserWindow({
+    width: 1200,
+    height: 800,
     icon: path.join(process.env.VITE_PUBLIC, 'electron-vite.svg'),
+    frame: false,
+    transparent: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.mjs'),
+      nodeIntegration: true,
+      contextIsolation: false,
     },
   })
 
@@ -91,6 +97,16 @@ app.whenReady().then(() => {
       win.setAlwaysOnTop(false)
     }
   })
+
+  ipcMain.on('window-minimize', () => win?.minimize())
+  ipcMain.on('window-maximize', () => {
+    if (win?.isMaximized()) {
+      win.unmaximize()
+    } else {
+      win?.maximize()
+    }
+  })
+  ipcMain.on('window-close', () => win?.close())
 
   createWindow()
 })
