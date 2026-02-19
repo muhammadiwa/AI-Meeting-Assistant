@@ -2,7 +2,7 @@
 
 An intelligent desktop application that transcribes your meetings in real-time and uses AI to extract action items, decisions, and summaries. Built with Electron, React, and cutting-edge AI services.
 
-![AI Meeting Assistant](https://placehold.co/1200x600/1e293b/ffffff?text=AI+Meeting+Assistant+Preview)
+![AI Meeting Assistant](public/image.png)
 
 ## 🚀 Key Features
 
