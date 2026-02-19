@@ -3,6 +3,7 @@ import { TranscriptionResult } from './deepgram-service'
 export interface TranscriptSegment {
     id: string
     speaker: number
+    speakerName?: string
     text: string
     start: number
     end: number
@@ -13,6 +14,15 @@ export interface TranscriptSegment {
 export class TranscriptManager {
     private segments: TranscriptSegment[] = []
     private interimSegment: TranscriptSegment | null = null
+    private speakerMap: Map<number, string> = new Map()
+
+    setSpeakerName(speakerId: number, name: string) {
+        this.speakerMap.set(speakerId, name)
+    }
+
+    getSpeakerName(speakerId: number): string {
+        return this.speakerMap.get(speakerId) || `Speaker ${speakerId}`
+    }
 
     addResult(result: TranscriptionResult) {
         if (result.isFinal) {
@@ -56,15 +66,20 @@ export class TranscriptManager {
     }
 
     getSegments(): TranscriptSegment[] {
+        const mapSegment = (s: TranscriptSegment) => ({
+            ...s,
+            speakerName: this.getSpeakerName(s.speaker)
+        })
+
         if (this.interimSegment) {
-            return [...this.segments, this.interimSegment]
+            return [...this.segments.map(mapSegment), mapSegment(this.interimSegment)]
         }
-        return this.segments
+        return this.segments.map(mapSegment)
     }
 
     getFullTranscript(): string {
         return this.getSegments()
-            .map(s => `[Speaker ${s.speaker}]: ${s.text}`)
+            .map(s => `[${s.speakerName}]: ${s.text}`)
             .join('\n')
     }
 
@@ -74,7 +89,7 @@ export class TranscriptManager {
 
         return this.getSegments()
             .filter(s => s.end >= startTime)
-            .map(s => `[${new Date(s.start * 1000).toISOString().substr(14, 5)}] Speaker ${s.speaker}: ${s.text}`)
+            .map(s => `[${new Date(s.start * 1000).toISOString().substr(14, 5)}] ${s.speakerName}: ${s.text}`)
             .join('\n')
     }
 

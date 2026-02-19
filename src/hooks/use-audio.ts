@@ -87,6 +87,11 @@ export function useAudio() {
         setTranscript([])
     }
 
+    const setSpeakerName = (speakerId: number, name: string) => {
+        transcriptManager.current.setSpeakerName(speakerId, name)
+        updateTranscriptState()
+    }
+
     return {
         isRecording,
         connectionState,
@@ -94,6 +99,7 @@ export function useAudio() {
         startRecording,
         stopRecording,
         getDesktopSources,
-        clearTranscript
+        clearTranscript,
+        setSpeakerName
     }
 }
