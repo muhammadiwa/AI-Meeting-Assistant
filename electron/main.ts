@@ -74,6 +74,7 @@ app.whenReady().then(() => {
   })
 
   ipcMain.handle('get-meetings', () => store.getMeetings())
+  ipcMain.handle('get-meeting', (_, id) => store.getMeeting(id))
   ipcMain.handle('save-meeting', (_, data) => store.saveMeeting(data))
   ipcMain.handle('delete-meeting', (_, id) => store.deleteMeeting(id))
   ipcMain.handle('get-settings', () => store.getSettings())
