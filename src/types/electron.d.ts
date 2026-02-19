@@ -7,6 +7,8 @@ export interface IpcRenderer {
 
 declare global {
     interface Window {
-        ipcRenderer: IpcRenderer
+        ipcRenderer: IpcRenderer & {
+            invoke(channel: 'set-window-mode', mode: 'overlay' | 'dashboard'): Promise<void>
+        }
     }
 }

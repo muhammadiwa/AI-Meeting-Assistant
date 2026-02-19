@@ -79,5 +79,17 @@ app.whenReady().then(() => {
   ipcMain.handle('get-settings', () => store.getSettings())
   ipcMain.handle('set-settings', (_, data) => store.setSettings(data))
 
+  ipcMain.handle('set-window-mode', (_, mode: 'overlay' | 'dashboard') => {
+    if (!win) return
+    if (mode === 'overlay') {
+      win.setSize(400, 600)
+      win.setAlwaysOnTop(true)
+    } else {
+      win.setSize(1200, 800)
+      win.center()
+      win.setAlwaysOnTop(false)
+    }
+  })
+
   createWindow()
 })
