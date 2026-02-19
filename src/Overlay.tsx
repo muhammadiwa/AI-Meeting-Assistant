@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { LayoutDashboard } from 'lucide-react'
+import { LayoutDashboard, Eye, EyeOff } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { useAudio } from '@/hooks/use-audio'
@@ -8,6 +8,7 @@ import { useIntelligence } from '@/hooks/use-intelligence'
 import { TranscriptView } from '@/components/TranscriptView'
 import { ControlBar } from '@/components/ControlBar'
 import { SettingsModal } from '@/components/SettingsModal'
+import { db } from '@/lib/db-client'
 
 function Overlay() {
   const navigate = useNavigate()
@@ -23,11 +24,14 @@ function Overlay() {
   const {
     insight,
     generateInsight,
+    generateSummary
   } = useIntelligence()
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [sources, setSources] = useState<Electron.DesktopCapturerSource[]>([])
   const [selectedSourceId, setSelectedSourceId] = useState<string>('')
+  const [isQuietMode, setIsQuietMode] = useState(false)
+  const [isProcessing, setIsProcessing] = useState(false)
 
   // Load sources on mount
   useEffect(() => {
@@ -68,6 +72,40 @@ function Overlay() {
     }
   }
 
+  const handleStop = async () => {
+    stopRecording()
+    setIsProcessing(true)
+
+    // Generate Summary
+    const fullText = transcript.map(s => `[${s.speakerName || s.speaker}]: ${s.text}`).join('\n')
+    let summary = ''
+    if (fullText.trim().length > 50) {
+      await new Promise<void>((resolve) => {
+        generateSummary(fullText, (chunk) => {
+          summary += chunk
+        }).then(resolve).catch(e => {
+          console.error("Summary generation failed", e)
+          resolve()
+        })
+      })
+    }
+
+    // Save to DB
+    const id = await db.saveMeeting({
+      title: `Meeting ${new Date().toLocaleString()}`,
+      date: new Date().toISOString(),
+      duration: transcript.length > 0 ? (transcript[transcript.length - 1].end - transcript[0].start) : 0,
+      transcript: transcript,
+      summary: summary
+    }) as string
+
+    setIsProcessing(false)
+
+    // Switch to Dashboard
+    await window.ipcRenderer.invoke('set-window-mode', 'dashboard')
+    navigate(`/dashboard/meetings/${id}`)
+  }
+
   const switchToDashboard = async () => {
     await window.ipcRenderer.invoke('set-window-mode', 'dashboard')
     navigate('/dashboard')
@@ -81,8 +119,14 @@ function Overlay() {
         <div className="h-6 w-full cursor-move rounded-t-lg bg-white/10" style={{ WebkitAppRegion: 'drag' } as any} />
 
         {/* Main Content Area */}
-        <div className="flex-1 overflow-hidden p-4 pt-0 pb-0">
-          <TranscriptView transcript={transcript} />
+        <div className="flex-1 overflow-hidden p-4 pt-0 pb-0 relative">
+          {isProcessing ? (
+            <div className="flex h-full items-center justify-center text-white">
+              <p>Generating Summary...</p>
+            </div>
+          ) : (
+            !isQuietMode && <TranscriptView transcript={transcript} />
+          )}
         </div>
 
         {/* Intelligence Overlay (Insights) */}
@@ -99,19 +143,32 @@ function Overlay() {
             isRecording={isRecording}
             connectionState={connectionState}
             onStartRecording={handleStart}
-            onStopRecording={stopRecording}
+            onStopRecording={handleStop}
             onOpenSettings={() => setIsSettingsOpen(true)}
           />
-          <Button
-            variant="ghost"
-            size="sm"
-            className="absolute top-2 right-2 h-6 w-6 p-0 text-white/50 hover:text-white"
-            onClick={switchToDashboard}
-          >
-            <LayoutDashboard className="h-4 w-4" />
-          </Button>
+          <div className="absolute top-2 right-2 flex gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 w-6 p-0 text-white/50 hover:text-white"
+              onClick={() => setIsQuietMode(!isQuietMode)}
+              title="Toggle Quiet Mode"
+            >
+              {isQuietMode ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 w-6 p-0 text-white/50 hover:text-white"
+              onClick={switchToDashboard}
+              title="Open Dashboard"
+            >
+              <LayoutDashboard className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </Card>
+
 
       <SettingsModal
         open={isSettingsOpen}

@@ -50,6 +50,21 @@ export class OpenAIService {
         await this.streamCompletion(prompt, onChunk)
     }
 
+    async generateSummary(fullTranscript: string, onChunk: (chunk: string) => void) {
+        const prompt = `
+    Generate a comprehensive meeting summary based on the following transcript.
+    Structure the summary as follows:
+    1.  **Executive Summary**: A brief paragraph summarizing the meeting's purpose and outcome.
+    2.  **Key Discussion Points**: Bullet points of main topics.
+    3.  **Action Items**: List of tasks with assignees (if identifiable).
+    4.  **Decisions Made**: Key conclusions reached.
+    
+    Transcript:
+    ${fullTranscript}
+    `
+        await this.streamCompletion(prompt, onChunk)
+    }
+
     private async streamCompletion(prompt: string, onChunk: (chunk: string) => void) {
         try {
             const stream = await this.openai.chat.completions.create({

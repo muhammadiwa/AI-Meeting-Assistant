@@ -70,6 +70,20 @@ export function useIntelligence() {
         }
     }, [])
 
+    const generateSummary = useCallback(async (fullTranscript: string, onChunk: (chunk: string) => void) => {
+        setIsGenerating(true)
+        try {
+            const service = await initService()
+            if (service) {
+                await service.generateSummary(fullTranscript, onChunk)
+            }
+        } catch (e) {
+            console.error('Failed to generate summary:', e)
+        } finally {
+            setIsGenerating(false)
+        }
+    }, [])
+
     return {
         insight,
         suggestedAnswer,
@@ -77,6 +91,7 @@ export function useIntelligence() {
         isGenerating,
         generateInsight,
         generateAnswer,
-        translate
+        translate,
+        generateSummary
     }
 }

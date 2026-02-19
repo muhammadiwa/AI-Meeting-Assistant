@@ -2,14 +2,8 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Download } from 'lucide-react'
 import { db } from '@/lib/db-client'
-// We can reuse TranscriptView if we adapt the types, or create a simple list
-// TranscriptView expects TranscriptSegment[] which has 'isFinal' etc.
-// The stored transcript might be different?
-// store.ts saves 'transcript' as unknown. 
-// In TranscriptManager, getSegments() returns TranscriptSegment[].
-// We should assume it saves that array.
 
 interface StoredSegment {
     id: string
@@ -28,6 +22,7 @@ interface MeetingDetail {
     date: string
     duration: number
     transcript: StoredSegment[]
+    summary?: string
 }
 
 export function MeetingDetail() {
@@ -45,23 +40,65 @@ export function MeetingDetail() {
         setMeeting(data)
     }
 
+    const handleExport = () => {
+        if (!meeting) return
+
+        let content = `# ${meeting.title}\n`
+        content += `Date: ${new Date(meeting.date).toLocaleString()}\n`
+        content += `Duration: ${Math.round(meeting.duration / 60)} mins\n\n`
+
+        if (meeting.summary) {
+            content += `## Summary\n${meeting.summary}\n\n`
+        }
+
+        content += `## Transcript\n`
+        content += meeting.transcript.map(s =>
+            `**${s.speakerName || `Speaker ${s.speaker}`}** (${new Date(s.start * 1000).toISOString().substr(14, 5)}): ${s.text}`
+        ).join('\n\n')
+
+        const blob = new Blob([content], { type: 'text/markdown' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `meeting-${meeting.id}.md`
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+    }
+
     if (!meeting) return <div>Loading...</div>
 
     return (
         <div className="space-y-4">
-            <Button variant="ghost" onClick={() => navigate('/dashboard/meetings')} className="gap-2">
-                <ArrowLeft className="h-4 w-4" />
-                Back to Meetings
-            </Button>
+            <div className="flex items-center justify-between">
+                <Button variant="ghost" onClick={() => navigate('/dashboard/meetings')} className="gap-2">
+                    <ArrowLeft className="h-4 w-4" />
+                    Back to Meetings
+                </Button>
+                <Button variant="outline" onClick={handleExport} className="gap-2">
+                    <Download className="h-4 w-4" />
+                    Export to Markdown
+                </Button>
+            </div>
 
             <Card>
                 <CardHeader>
                     <CardTitle>{meeting.title}</CardTitle>
                     <CardDescription>{new Date(meeting.date).toLocaleString()} • {Math.round(meeting.duration / 60)} mins</CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-6">
+                    {meeting.summary && (
+                        <div className="space-y-2">
+                            <h3 className="text-lg font-semibold">Summary</h3>
+                            <div className="rounded-md bg-muted p-4 whitespace-pre-wrap">
+                                {meeting.summary}
+                            </div>
+                        </div>
+                    )}
+
                     <div className="space-y-4">
-                        <h3 className="font-semibold">Transcript</h3>
+                        <h3 className="text-lg font-semibold">Transcript</h3>
                         <div className="space-y-2">
                             {meeting.transcript && meeting.transcript.map((segment) => (
                                 <div key={segment.id} className="flex gap-2">

@@ -9,6 +9,7 @@ interface MeetingMetadata {
     title: string
     date: string
     duration: number
+    summary?: string
 }
 
 interface Settings {
@@ -50,7 +51,7 @@ export class MeetingsStore {
     }
 
     getMeeting(id: string) {
-        const meta = this.getMeetings().find((m) => m.id === id)
+        const meta = this.getMeetings().find((m: MeetingMetadata) => m.id === id)
         if (!meta) return null
 
         // Load transcript
@@ -73,11 +74,12 @@ export class MeetingsStore {
             title: meeting.title || `Meeting ${new Date().toLocaleString()}`,
             date: meeting.date || new Date().toISOString(),
             duration: meeting.duration || 0,
+            summary: meeting.summary
         }
 
         // Update metadata list
         const meetings = this.getMeetings()
-        const index = meetings.findIndex((m) => m.id === id)
+        const index = meetings.findIndex((m: MeetingMetadata) => m.id === id)
         if (index >= 0) {
             meetings[index] = meta
         } else {
@@ -95,7 +97,7 @@ export class MeetingsStore {
     }
 
     deleteMeeting(id: string) {
-        const meetings = this.getMeetings().filter((m) => m.id !== id)
+        const meetings = this.getMeetings().filter((m: MeetingMetadata) => m.id !== id)
         store.set('meetings', meetings)
 
         const transcriptPath = path.join(this.transcriptDir, `${id}.json`)
